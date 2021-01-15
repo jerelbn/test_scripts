@@ -1,8 +1,9 @@
-# Testing a camera calibration solution.
+# Testing a camera calibration solution for small distortions.
 # A good reference: https://www.mathworks.com/help/vision/ug/camera-calibration.html
 import matplotlib.pyplot as plt
 from numpy import linspace, meshgrid, array, ones, zeros, vstack, hstack, sqrt
 from numpy.linalg import pinv, norm
+from numpy.random import rand
 from utils import *
 
 # Intrinsic parameters
@@ -17,11 +18,11 @@ K = array([[   fx,  0.0,  cx],  # intrinsic camera matrix
            [  0.0,  0.0, 1.0]])
 
 # Distortion parameters
-k1 = -0.15
-k2 = 0.05
-k3 = -0.01
-p1 = -0.009
-p2 = 0.008
+k1 = 0.1*2*(rand()-0.5) # [-0.2,0.2]
+k2 = 0.1*2*(rand()-0.5) # [-0.1,0.1]
+k3 = 0.05*2*(rand()-0.5) # [-0.05,0.05]
+p1 = 0.01*2*(rand()-0.5) # [-0.01,0.01]
+p2 = 0.01*2*(rand()-0.5) # [-0.01,0.01]
 
 # points in 3D camera coordinates (right-down-forward)
 M = 11
@@ -53,20 +54,27 @@ x2_prev = 999.*ones(x2.shape)
 err = 999.
 err_prev = 0.
 pts_undist2 = pts_dist.copy()
-while abs(err - err_prev) > 1e-6:
+iters = 0
+max_iters = 1000
+while abs(err - err_prev) > 1e-4 and iters < max_iters:
     # undistort the points after obtaining initial guess of intrinsic parameters
     if (all(x1) > 0):
         pts_undist2 = undistortPoints(pts_dist, x1, x2)
 
     # solve for intrinsics
+    x1_prev = x1
     x1 = solveIntrinsics(pts_3d, pts_undist2)
 
     # solve for distortion coefficients
+    x2_prev = x2
     x2 = solveDistortion(pts_3d, pts_dist, x1)
 
     # compute change in solution
     err_prev = err
     err = norm(hstack([x1 - x1_prev,x2 - x2_prev]))
+
+    # increment iteration count
+    iters += 1
 
 print('fx: ' + f'{x1[0]:10.3f}' + ', err: ' + f'{fx - x1[0]:10.3f}')
 print('fy: ' + f'{x1[1]:10.3f}' + ', err: ' + f'{fy - x1[1]:10.3f}')

@@ -104,6 +104,7 @@ def undistortPoints(pts_dist, intrinsics, distcoeffs, tol=1e-6):
     p1 = distcoeffs[3]
     p2 = distcoeffs[4]
     pts_3d = ones([3,N])
+    max_iters = 1000
     for i in range(0,N):
         xd = (pts_dist[0,i] - cx)/fx
         yd = (pts_dist[1,i] - cy)/fy
@@ -112,12 +113,14 @@ def undistortPoints(pts_dist, intrinsics, distcoeffs, tol=1e-6):
         x_prev = 1e9
         y_prev = 1e9
         # an iterative solution is required to solve these equations for x,y
-        while abs(x - x_prev) > tol and abs(y - y_prev) > tol:
+        iters = 0
+        while abs(x - x_prev) > tol and abs(y - y_prev) > tol and iters < max_iters:
             x_prev = x
             y_prev = y
             r = sqrt(x**2 + y**2)
             x = (xd - 2*p1*x*y - p2*(r**2 + 2*x**2))/(1.0 + k1*r**2 + k2*r**4 + k3*r**6)
             y = (yd - p1*(r**2 + 2*y**2) - 2*p2*x*y)/(1.0 + k1*r**2 + k2*r**4 + k3*r**6)
+            iters += 1
         pts_3d[0,i] = x
         pts_3d[1,i] = y
     return project2image(pts_3d, K)
